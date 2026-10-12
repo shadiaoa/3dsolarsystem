@@ -23,6 +23,16 @@ export interface SimState {
   grEnabled: boolean;
   /** 主小行星带点云 */
   showBelt: boolean;
+  /** 柯伊伯带真实天体点云 */
+  showKuiper: boolean;
+  /** 太阳风结构层（帕克螺旋/电流片/日球层边界） */
+  showSolarWind: boolean;
+  /** 太阳风精细结构层（日–火区间就地实测，与示意层互斥） */
+  showInnerWind: boolean;
+  /** 地球磁层示意图（仅在选中地球时显示） */
+  showMagnetosphere: boolean;
+  /** 仅显示太阳系内天体（隐藏背景星空） */
+  solarOnly: boolean;
   /** 单独隐藏轨道的天体 id 集合 */
   orbitOff: Set<string>;
 }
@@ -57,6 +67,11 @@ export function setupUI(state: SimState, reg: BodyRegistry, hooks: UIHooks) {
   const chkTrue = $<HTMLInputElement>("chk-true");
   const chkGR = $<HTMLInputElement>("chk-gr");
   const chkBelt = $<HTMLInputElement>("chk-belt");
+  const chkKuiper = $<HTMLInputElement>("chk-kuiper");
+  const chkSolarWind = $<HTMLInputElement>("chk-solarwind");
+  const chkInnerWind = $<HTMLInputElement>("chk-innerwind");
+  const chkMagnetosphere = $<HTMLInputElement>("chk-magnetosphere");
+  const chkSolarOnly = $<HTMLInputElement>("chk-solaronly");
 
   // ── 流速滑杆（对数：1 秒/秒 → 1 年/秒） ──
   rateSlider.value = String(SLIDER_ONE_DAY);
@@ -159,6 +174,26 @@ export function setupUI(state: SimState, reg: BodyRegistry, hooks: UIHooks) {
   chkTrue.addEventListener("change", () => { state.trueScale = chkTrue.checked; hooks.onTrueScale(chkTrue.checked); });
   chkGR.addEventListener("change", () => { state.grEnabled = chkGR.checked; hooks.onGR(chkGR.checked); });
   chkBelt.addEventListener("change", () => { state.showBelt = chkBelt.checked; hooks.onVisibility(); });
+  chkKuiper.addEventListener("change", () => { state.showKuiper = chkKuiper.checked; hooks.onVisibility(); });
+  chkSolarWind.addEventListener("change", () => {
+    // 示意层与实测精细层互斥：开一个即关另一个（同一片区域，避免叠画）
+    if (chkSolarWind.checked) {
+      chkInnerWind.checked = false;
+      state.showInnerWind = false;
+    }
+    state.showSolarWind = chkSolarWind.checked;
+    hooks.onVisibility();
+  });
+  chkMagnetosphere.addEventListener("change", () => { state.showMagnetosphere = chkMagnetosphere.checked; hooks.onVisibility(); });
+  chkInnerWind.addEventListener("change", () => {
+    if (chkInnerWind.checked) {
+      chkSolarWind.checked = false;
+      state.showSolarWind = false;
+    }
+    state.showInnerWind = chkInnerWind.checked;
+    hooks.onVisibility();
+  });
+  chkSolarOnly.addEventListener("change", () => { state.solarOnly = chkSolarOnly.checked; hooks.onVisibility(); });
 
   // ── 每帧刷新（由 main 调用） ──
   return {
@@ -176,6 +211,11 @@ export function setupUI(state: SimState, reg: BodyRegistry, hooks: UIHooks) {
       const follow = followId ? itemEls.get(followId) : null;
       for (const [, el] of itemEls) el.style.fontWeight = "";
       if (follow) follow.style.fontWeight = "700";
+    },
+    /** 程序化设置流速（地表观测进入/退出时同步滑杆与状态） */
+    setRate(r: number) {
+      state.rate = r;
+      rateSlider.value = String(rateToSlider(r));
     },
     syncDateInput,
   };

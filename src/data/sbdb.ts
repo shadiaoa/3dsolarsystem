@@ -97,6 +97,64 @@ const META: Record<string, Meta> = {
     radiusKm: 8.42, massKg: 6.687e15, rotationHours: 5.27, axialTiltDeg: 89.0,
     fact: "首颗被发现的近地小行星（1898）；2001 年 NEAR 鞋匠号成为首个环绕并着陆小行星的探测器。",
   },
+  // ── 著名海外天体（矮行星候选）────────────────────────────────────────────
+  // 轨道根数由 scripts/fetch-sbdb.mjs 从 JPL SBDB 全精度拉取；
+  // 自转周期 rot_per 亦取自 SBDB（LCDB 光度测量）；
+  // **半径**：SBDB 对这些天体不给直径，故按标准公式 D = 1329·10^(−H/5)/√p 由 SBDB 的绝对星等 H
+  //          与假定几何反照率 p 推算（p 取该类天体的公开发表辐射测量估计），
+  //          故为估算值而非直接测量（量级与文献辐射测量半径相符，误差约 20%）。
+  // **质量**：由该估算半径按假定密度 1000 kg/m³ 推算（仅用于信息卡展示）。
+  // **轴倾角**：多数海外天体自转轴尚未测定，取 0 表示未建模。
+  Quaoar: {
+    id: "quaoar", name: "创神星", nameEn: "50000 Quaoar", color: 0xd9d2c6,
+    radiusKm: 693, massKg: 1.394e21, rotationHours: 8.84, axialTiltDeg: 0,
+    fact: "经典柯伊伯带大型天体，有卫星 Weywot；2023 年在其洛希极限之外发现环系，挑战了环的成因理论。",
+  },
+  Orcus: {
+    id: "orcus", name: "亡神星", nameEn: "90482 Orcus", color: 0xbdb8b0,
+    radiusKm: 520, massKg: 5.888e20, rotationHours: 13.188, axialTiltDeg: 0,
+    fact: "与冥王星成 3:2 共振但轨道相位相反，被称为「反冥王星」；有大型卫星 Vanth（直径约 440 km）。",
+  },
+  Gonggong: {
+    id: "gonggong", name: "共工星", nameEn: "225088 Gonggong", color: 0xc08a78,
+    radiusKm: 768, massKg: 1.897e21, rotationHours: 22.4, axialTiltDeg: 0,
+    fact: "与海王星成 3:10 共振，是太阳系最红的天体之一（表面甲烷冰）；有卫星 Xiangliu，可能存在地下海洋。",
+  },
+  Sedna: {
+    id: "sedna", name: "赛德娜", nameEn: "90377 Sedna", color: 0xc4756a,
+    radiusKm: 589, massKg: 8.558e20, rotationHours: 10.273, axialTiltDeg: 0,
+    fact: "离散盘天体：近日点 76 AU、远日点约 937 AU，周期约 1.14 万年。轨道与巨行星解耦，是「第九行星」假说的重要线索。",
+  },
+  Arrokoth: {
+    id: "arrokoth", name: "阿罗科斯", nameEn: "486958 Arrokoth", color: 0xa87060,
+    radiusKm: 9, massKg: 3.05e15, rotationHours: 15.918, axialTiltDeg: 0,
+    fact: "新视野号 2019 年飞掠，是人类迄今造访的最远天体；双瓣「接触双星」，为星子吸积过程留下了原始样本。",
+  },
+  Varuna: {
+    id: "varuna", name: "伐楼拿", nameEn: "20000 Varuna", color: 0x9aa6b8,
+    radiusKm: 322, massKg: 1.398e20, rotationHours: 6.3436, axialTiltDeg: 0,
+    fact: "经典柯伊伯带大型天体，自转仅约 6.3 小时，被离心力塑造成明显的三轴椭球。",
+  },
+  Ixion: {
+    id: "ixion", name: "伊克西翁", nameEn: "28978 Ixion", color: 0xa8938a,
+    radiusKm: 359, massKg: 1.938e20, rotationHours: 12.58, axialTiltDeg: 0,
+    fact: "首个被发现的冥族天体（3:2 共振）之一，表面覆盖暗红色的有机托林。",
+  },
+  Salacia: {
+    id: "salacia", name: "萨拉基亚", nameEn: "120347 Salacia", color: 0xb9b2a6,
+    radiusKm: 498, massKg: 5.174e20, rotationHours: 6.09, axialTiltDeg: 0,
+    fact: "反照率极低（约 0.04），是新视野号之前最暗的海外天体之一；有卫星 Actaea，可能为岩石核与冰幔分层结构。",
+  },
+  Varda: {
+    id: "varda", name: "瓦尔达", nameEn: "174567 Varda", color: 0xc9c4bb,
+    radiusKm: 361, massKg: 1.971e20, rotationHours: 5.91, axialTiltDeg: 0,
+    fact: "快速自转（约 5.9 小时）的经典柯伊伯带天体，有卫星 Ilmarë。",
+  },
+  "2018 VG18": {
+    id: "farout18", name: "2018 VG18", nameEn: "2018 VG18 (Farout)", color: 0xd8b0a2,
+    radiusKm: 342, massKg: 1.675e20, rotationHours: 12, axialTiltDeg: 0,
+    fact: "昵称「Farout」，2018 年发现时是已知最遥远的天体（约 124 AU）；自转周期尚未测定。",
+  },
 };
 
 const JD_J2000 = 2451545.0;

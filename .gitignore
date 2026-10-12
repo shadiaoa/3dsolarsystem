@@ -1,5 +1,6 @@
 node_modules/
 dist/
 scripts/.validate-bundle.mjs
+scripts/.cache/
 shots/
 3dsolarsystem.md

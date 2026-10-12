@@ -21,6 +21,17 @@ const TARGETS = [
   { id: "Bennu", kind: "asteroid" },
   { id: "Itokawa", kind: "asteroid" },
   { id: "Eros", kind: "asteroid" },
+  // 著名海外天体（矮行星候选）：注册为完整天体 → 自动获得导航条目/轨道线/信息卡/可站上观测
+  { id: "Quaoar", kind: "dwarf" },
+  { id: "Orcus", kind: "dwarf" },
+  { id: "Gonggong", kind: "dwarf" },
+  { id: "Sedna", kind: "dwarf" },
+  { id: "Arrokoth", kind: "dwarf" },
+  { id: "Varuna", kind: "dwarf" },
+  { id: "Ixion", kind: "dwarf" },
+  { id: "Salacia", kind: "dwarf" },
+  { id: "Varda", kind: "dwarf" },
+  { id: "2018 VG18", kind: "dwarf" },
 ];
 
 async function fetchBody(id) {
@@ -48,9 +59,21 @@ async function fetchBody(id) {
 
 const bodies = [];
 for (const t of TARGETS) {
-  const b = await fetchBody(t.id);
-  bodies.push({ id: t.id, kind: t.kind, ...b });
-  console.log(t.id, "a=", b.elements.a, "e=", b.elements.e, "epoch=", b.epoch);
+  try {
+    const b = await fetchBody(t.id);
+    bodies.push({ id: t.id, kind: t.kind, ...b });
+    console.log(
+      t.id.padEnd(12),
+      "a=", String(b.elements.a).padEnd(10),
+      "e=", String(b.elements.e).padEnd(9),
+      "per=", String(b.elements.per).padEnd(12),
+      "diam=", String(b.phys.diameterKm ?? "-").padEnd(8),
+      "rot=", b.phys.rotHours ?? "-",
+      "|", b.fullName,
+    );
+  } catch (e) {
+    console.error(`✗ ${t.id}: ${e.message}`);
+  }
 }
 
 writeFileSync(

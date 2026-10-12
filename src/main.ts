@@ -12,8 +12,14 @@ window.addEventListener("error", (e) => {
 import { buildBodies, applyDisplayPositions, applyTruePositions, setScaleMode, spinAngle, type SimBody, type ScaleMode } from "./render/bodies";
 import { OrbitLines } from "./render/orbits";
 import { AsteroidBelt } from "./render/belt";
+import { KuiperBelt } from "./render/kuiper";
+import { SolarWindLayer } from "./render/solarwind";
+import { InnerWindLayer } from "./render/innerwind";
+import { MagnetosphereLayer } from "./render/magnetosphere";
+import { KM_PER_AU } from "./render/scale";
 import { applyShapes, updateShapeLod } from "./render/shapes";
 import { applyRealTextures } from "./render/textures";
+import { SurfaceObserver } from "./render/surface";
 import { Labels } from "./render/labels";
 import { setupUI, type SimState } from "./ui/controls";
 import { InfoCard } from "./ui/infocard";
@@ -31,6 +37,14 @@ applyRealTextures(reg);
 applyShapes(reg);
 const orbits = new OrbitLines(kit.world, reg);
 const belt = new AsteroidBelt(kit.world);
+/** 柯伊伯带真实天体（JPL SBDB，异步加载） */
+const kuiper = new KuiperBelt(kit.world);
+/** 太阳风结构层（OMNI2 + WSO，异步加载；结构可视化） */
+const solarwind = new SolarWindLayer(kit.world);
+/** 日–火区间太阳风精细结构（PSP/SolarOrbiter/Helios 就地实测，按需加载） */
+const innerwind = new InnerWindLayer(kit.world);
+/** 太阳风–地球磁层相互作用示意图（尺寸由实测太阳风驱动，选中地球时显示） */
+const magnetosphere = new MagnetosphereLayer(kit.world);
 
 const state: SimState = {
   jd: dateToJD(new Date()),
@@ -45,6 +59,11 @@ const state: SimState = {
   trueScale: false,
   grEnabled: true,
   showBelt: true,
+  showKuiper: true,
+  showSolarWind: true,
+  showInnerWind: false,
+  showMagnetosphere: true,
+  solarOnly: false,
   orbitOff: new Set<string>(),
 };
 
@@ -85,7 +104,12 @@ function updatePhysics(jd: number) {
 
 /* ─────────────────────────── 选中 / 跟随 / 拾取 ─────────────────────────── */
 
-const infoCard = new InfoCard(reg);
+const infoCard = new InfoCard(reg, {
+  onSurface: (id) => {
+    if (surface.active && surface.bodyId === id) return; // 已在观测中：幂等，避免反复进入造成抖动
+    surface.enter(id, daysSinceJ2000(state.jd), state.rate);
+  },
+});
 
 function selectBody(id: string | null, follow = false) {
   state.selectedId = id;
@@ -112,6 +136,8 @@ const ui = setupUI(state, reg, {
   onGR: (on) => orbits.setGR(on),
 });
 
+const surface = new SurfaceObserver(reg, kit, { setRate: (r) => ui.setRate(r) });
+
 orbits.setGR(state.grEnabled);
 
 function applyVisibility() {
@@ -120,7 +146,13 @@ function applyVisibility() {
     if (b.id !== reg.sun.id) orbits.setBodyOrbit(b.id, !state.orbitOff.has(b.id));
   }
   for (const m of reg.moons) m.pivot.visible = state.showMoons;
+  // 三层「深空层」的用户开关（地表观测时的额外隐藏由主循环叠加，见 frame）
   belt.setVisible(state.showBelt);
+  kuiper.setVisible(state.showKuiper);
+  solarwind.setVisible(state.showSolarWind);
+  innerwind.setVisible(state.showInnerWind);
+  magnetosphere.setVisible(state.showMagnetosphere);
+  kit.starfield.visible = !state.solarOnly;
 }
 applyVisibility();
 
@@ -161,10 +193,14 @@ canvas.addEventListener("pointerup", (e) => {
   }
 });
 canvas.addEventListener("dblclick", (e) => {
+  if (surface.active) return; // 地表模式内双击不触发轨道视角的取消跟随
   if (!pickAt(e.clientX, e.clientY)) {
     state.followId = null;
     ui.setSelected(state.selectedId, null);
   }
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && surface.active) surface.exit();
 });
 
 /* ─────────────────────────── 真实比例：浮动原点 / 模式切换 ─────────────────────────── */
@@ -244,9 +280,19 @@ const _delta = new THREE.Vector3();
 let lastInfo = 0;
 const clock = new THREE.Clock();
 
+// 单帧时长上限：低于此帧率时才截断。原值 0.1 意味着帧率跌破 10fps 后时间会被按比例拖慢，
+// 表现为"画面一有额外负担，流速就变慢"。放宽到 0.25 允许 4fps 仍按真实时间推进；
+// 后台切回的大跳变由下面的 visibilitychange 冲掉时钟增量来处理。
+const MAX_FRAME_DT = 0.25;
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) clock.getDelta();
+});
+
+let rafId = 0;
+
 function frame() {
-  requestAnimationFrame(frame);
-  const dt = Math.min(clock.getDelta(), 0.1); // 后台切回不跳变
+  rafId = requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), MAX_FRAME_DT);
   if (!state.paused) state.jd += state.direction * state.rate * dt;
 
   updatePhysics(state.jd);
@@ -261,7 +307,7 @@ function frame() {
       const jumped = originBodyId !== fb.id;
       originBodyId = fb.id;
       originTrue.copy(fb.dispPos);
-      if (jumped) {
+      if (jumped && !surface.active) {
         _dir.copy(kit.camera.position).sub(kit.controls.target);
         if (_dir.lengthSq() < 1e-12) _dir.set(0, 0, 1);
         _dir.normalize();
@@ -292,12 +338,37 @@ function frame() {
   kit.sunLight.position.copy(reg.sun.dispPos);
   for (const b of reg.all) b.rootPos.copy(b.dispPos).add(kit.world.position);
 
+  // 小行星带/柯伊伯带：地表观测时隐藏 —— 那个距离上它们星等 20+，肉眼不可见，显示出来反而不真实
+  const deepVisible = !surface.active;
+  belt.setVisible(state.showBelt && deepVisible);
+  kuiper.setVisible(state.showKuiper && deepVisible);
+  // 太阳风结构同为肉眼不可见之物，观测模式下同样隐藏
+  solarwind.setVisible(state.showSolarWind && deepVisible);
+  innerwind.setVisible(state.showInnerWind && deepVisible);
+
   orbits.update(state.jd, state.trueScale ? originTrue : ORIGIN_ZERO);
   belt.update(state.jd, state.trueScale ? originTrue : ORIGIN_ZERO, state.trueScale);
+  kuiper.update(state.jd, state.trueScale ? originTrue : ORIGIN_ZERO, state.trueScale);
+  // 共转角直接取太阳网格自转角 → 螺旋图案与渲染出的太阳表面同步
+  // 注意：这三层都挂在 kit.world 上（真实比例下 world 带 −原点 偏移），
+  // 故必须传 dispPos（与天体自身一致的约定）；传 rootPos 会把偏移算两次、整层被推出视野。
+  solarwind.update(state.jd, reg.sun.dispPos, spinAngle(reg.sun, daysSinceJ2000(state.jd)), state.trueScale);
+  innerwind.update(reg.sun.dispPos, state.trueScale);
+
+  // 地球磁层示意图：由开关独立控制（不依赖选中状态）；尺寸由当前日期实测太阳风驱动
+  const earth = reg.byId.get("earth");
+  const showMag = state.showMagnetosphere && deepVisible;
+  magnetosphere.setVisible(showMag);
+  if (showMag && earth) {
+    const sw = solarwind.current;
+    magnetosphere.update(earth, reg.sun.dispPos, daysSinceJ2000(state.jd), sw
+      ? { n: sw.n, v: sw.v, b: sw.bMag, bz: sw.bz }
+      : null);
+  }
 
   // 跟随（观赏模式）：相机与目标整体平移，保留用户当前视角；
   // 真实比例模式由浮动原点承担，无需此步
-  if (state.followId && !state.trueScale) {
+  if (state.followId && !state.trueScale && !surface.active) {
     const b = reg.byId.get(state.followId);
     if (b) {
       _delta.copy(b.rootPos).sub(kit.controls.target);
@@ -307,14 +378,21 @@ function frame() {
   }
 
   // 真实比例：near/far 随目标距离动态收紧（配合 LogarithmicDepthBuffer）
-  if (state.trueScale) {
+  // 地表观测模式下由 SurfaceObserver 接管（它的观测目标可能远在 1e8 km 外）
+  if (state.trueScale && !surface.active) {
     const d = kit.camera.position.distanceTo(kit.controls.target);
     kit.camera.near = Math.min(10, Math.max(1e-4, d * 1e-4));
-    kit.camera.far = Math.max(2e4, d * 1e3);
+    // 柯伊伯带开启时必须覆盖到最远天体（半长轴可达上千 AU），否则整层会被远裁剪面裁掉；
+    // 太阳风结构层延伸到日球层顶 120 AU 同理。
+    const kuiperFar = state.showKuiper ? kuiper.maxAU * 1.6 * KM_PER_AU : 0;
+    const swFar = state.showSolarWind ? 120 * 1.3 * KM_PER_AU : 0;
+    const innerFar = state.showInnerWind ? 1.7 * 1.3 * KM_PER_AU : 0;
+    kit.camera.far = Math.max(2e4, d * 1e3, kuiperFar, swFar, innerFar);
     kit.camera.updateProjectionMatrix();
   }
 
-  kit.controls.update();
+  if (surface.active) surface.update(daysSinceJ2000(state.jd), dt);
+  else kit.controls.update();
   updateShapeLod(reg, kit.camera);
   labels.update(kit.camera, state);
   ui.update();
@@ -323,3 +401,11 @@ function frame() {
   kit.renderer.render(kit.scene, kit.camera);
 }
 frame();
+
+// HMR 时停掉旧循环并清理地表观测残留，避免新旧实例同时渲染导致闪烁/操作无响应
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    cancelAnimationFrame(rafId);
+    surface.destroy();
+  });
+}

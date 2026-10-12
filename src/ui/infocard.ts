@@ -28,11 +28,18 @@ function rows(pairs: [string, string][]): string {
   return pairs.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join("");
 }
 
+export interface InfoCardHooks {
+  onSurface?: (id: string) => void;
+}
+
 export class InfoCard {
   private body: SimBody | null = null;
 
-  constructor(private reg: BodyRegistry) {
+  constructor(private reg: BodyRegistry, private hooks: InfoCardHooks = {}) {
     $("info-close").addEventListener("click", () => this.hide());
+    $("info-surface").addEventListener("click", () => {
+      if (this.body) this.hooks.onSurface?.(this.body.id);
+    });
   }
 
   show(id: string) {

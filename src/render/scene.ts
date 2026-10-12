@@ -4,6 +4,7 @@
  */
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { createStarfield } from "./starfield";
 
 export interface SceneKit {
   renderer: THREE.WebGLRenderer;
@@ -13,38 +14,8 @@ export interface SceneKit {
   /** 世界组：每帧 position = −浮动原点（真实比例模式对抗 float32 精度） */
   world: THREE.Group;
   sunLight: THREE.PointLight;
-  starfield: THREE.Points;
-}
-
-function makeStarfield(count: number): THREE.Points {
-  const pos = new Float32Array(count * 3);
-  const col = new Float32Array(count * 3);
-  // 确定性伪随机（每次加载星空一致）
-  let seed = 1234567;
-  const rnd = () => {
-    seed = (seed * 16807) % 2147483647;
-    return (seed - 1) / 2147483646;
-  };
-  for (let i = 0; i < count; i++) {
-    // 球面均匀分布
-    const u = rnd() * 2 - 1;
-    const th = rnd() * Math.PI * 2;
-    const s = Math.sqrt(1 - u * u);
-    const R = 3800;
-    pos[i * 3] = R * s * Math.cos(th);
-    pos[i * 3 + 1] = R * u;
-    pos[i * 3 + 2] = R * s * Math.sin(th);
-    const b = 0.4 + rnd() * 0.6;
-    const tint = rnd();
-    col[i * 3] = b * (tint > 0.85 ? 1.0 : tint > 0.7 ? 0.9 : 0.82);
-    col[i * 3 + 1] = b * 0.88;
-    col[i * 3 + 2] = b * (tint > 0.7 ? 0.85 : 1.0);
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  const mat = new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, depthWrite: false });
-  return new THREE.Points(geo, mat);
+  /** 星空组：真实星表（Hipparcos）异步替换程序化占位 */
+  starfield: THREE.Group;
 }
 
 export function createScene(canvas: HTMLCanvasElement): SceneKit {
@@ -58,7 +29,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneKit {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000005);
-  const starfield = makeStarfield(6000);
+  const starfield = createStarfield(6000);
   scene.add(starfield);
 
   const world = new THREE.Group();

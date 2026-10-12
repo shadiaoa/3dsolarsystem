@@ -1,0 +1,18 @@
+{
+  "name": "Solar System Dev",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "postCreateCommand": "npm ci",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Solar System (Vite)",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postAttachCommand": "npm run dev",
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["src/main.ts"]
+    }
+  }
+}

@@ -46,6 +46,11 @@
       <label class="check-row"><input id="chk-labels" type="checkbox" checked /> 天体名称</label>
       <label class="check-row"><input id="chk-moons" type="checkbox" checked /> 卫星系统</label>
       <label class="check-row"><input id="chk-belt" type="checkbox" checked /> 小行星带</label>
+      <label class="check-row"><input id="chk-kuiper" type="checkbox" checked /> 柯伊伯带（真实）</label>
+      <label class="check-row"><input id="chk-solarwind" type="checkbox" checked title="结构可视化（太阳风肉眼不可见）：帕克螺旋磁场线 · 径向流线 · 日球电流片（WSO 倾角）· 终止激波与日球层顶（旅行者实测距离）" /> 太阳风结构（示意）</label>
+      <label class="check-row"><input id="chk-innerwind" type="checkbox" title="实测精细结构：只画日–火区间（0.05–1.7 AU）—— 该区间是唯一有就地测量的区域（Parker Solar Probe / Solar Orbiter / Helios 1,2），按实测风速着色。与「示意」互斥。" /> 太阳风精细结构（日–火·实测）</label>
+      <label class="check-row"><input id="chk-magnetosphere" type="checkbox" checked title="太阳风与地球磁层相互作用的理想 MHD 示意图：磁层顶按 Shue et al. 1998 经验模型、弓激波按 Farris & Russell 1994 定标，尺寸由当前日期的实测太阳风动压与 IMF Bz 驱动。真实比例下为物理尺度（1 R_E = 6378 km）。" /> 地球磁层（示意）</label>
+      <label class="check-row"><input id="chk-solaronly" type="checkbox" /> 仅显示太阳系内天体</label>
       <label class="check-row"><input id="chk-gr" type="checkbox" checked /> 广义相对论（水星进动）</label>
       <label class="check-row"><input id="chk-true" type="checkbox" /> 真实比例（1:1）</label>
     </div>
@@ -55,6 +60,7 @@
       <button id="info-close" class="btn-close">✕</button>
       <div id="info-title" class="info-title">—</div>
       <div id="info-type" class="info-type">—</div>
+      <button id="info-surface" class="btn" title="站在该天体表面观测另一个天体">站到此天体上观测</button>
       <div class="panel-subtitle">实时状态</div>
       <div id="info-live" class="info-grid"></div>
       <div class="panel-subtitle">物理参数</div>
